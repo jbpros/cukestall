@@ -1,4 +1,137 @@
 (function($) {
+  var FrameBrowser = function FrameBrowser(frameSelector) {
+    var WAIT_FOR_TIMEOUT  = 5000;
+    var WAIT_FOR_DELAY    = 20;
+    var SAFETY_WAIT_DELAY = 20;
+
+    var $frame           = jQuery(frameSelector);
+    window.f = $frame;
+
+    function waitFor(subject, test, callback, errCallback) {
+      var start = new Date().getTime();
+
+      function check() {
+        var now     = new Date().getTime();
+        var elapsed = now - start;
+        if (test()) {
+          callback();
+        } else if (elapsed > WAIT_FOR_TIMEOUT) {
+          var error = new Error("Timed out waiting for " + subject);
+          if (errCallback)
+            errCallback(error);
+          else
+            throw error;
+        } else {
+          setTimeout(function () { check(callback); }, WAIT_FOR_DELAY);
+        }
+      };
+      check(test, callback);
+    };
+
+    function _visitUrl(url) {
+      $frame.get()[0].contentWindow.stop(); // stop possible current loads
+      if ($frame.attr('src') == url) {
+        $frame.get()[0].contentWindow.location.reload();
+      } else {
+        $frame.attr('src', url);
+      }
+    };
+
+    var self = {
+      visitUrl: function (url) {
+        return function visitUrl(callback) {
+          _visitUrl(url);
+          var state = $frame.get()[0].contentDocument.readyState;
+          callback();
+        };
+      },
+
+      fillIn: function (selector, value) {
+        return function fillIn(callback) {
+          self.waitForSelector(selector, function () {
+            self.find(selector).val(value);
+            callback();
+          });
+        };
+      },
+
+      clickLink: function (link) {
+        return function clickLink(callback) {
+          var selector = "a:contains('" + link.replace("'", "\\'") + "'):first";
+          self.waitForSelector(selector, function () {
+            var $a = self.find(selector);
+            var href = $a.attr('href');
+            $a.click();
+            if (href)
+              _visitUrl(href);
+            callback();
+          });
+        };
+      },
+
+      clickButton: function (selector) {
+        return function clickButton(callback) {
+          self.waitForSelector(selector, function () {
+            self.find(selector).click();
+            callback();
+          });
+        };
+      },
+
+      waitForPageToLoad: function () {
+        return function waitForPageToLoad(callback) {
+          var previousUrl = $frame.get()[0].contentDocument.location.href;
+          setTimeout(function () {
+            waitFor(
+              "page to load",
+              function () {
+                var state = $frame.get()[0].contentDocument.readyState;
+                var currentUrl = $frame.get()[0].contentDocument.location.href;
+                var isPageLoaded = state == 'complete' && currentUrl != previousUrl;
+                return isPageLoaded;
+              },
+              callback
+            );
+          }, SAFETY_WAIT_DELAY); // TODO: remove this ugly hack
+        };
+      },
+
+      assertBodyText: function (text) {
+        return function assertBodyText(callback) {
+          waitFor(
+            "body text to contain " + text,
+            function () {
+              var bodyText      = $($frame.get()[0].contentDocument.body).text().replace(/\n\n/g, '\n');
+              var isTextPresent = bodyText.indexOf(text) !== -1;
+              return isTextPresent;
+            },
+            callback
+          );
+        };
+      },
+
+      // internals
+
+      waitForSelector: function (selector, callback) {
+        waitFor(
+          "selector \"" + selector + "\"",
+          function () {
+            var elements = self.find(selector);
+            var found    = elements.length > 0;
+            return found;
+          },
+          callback
+        );
+      },
+
+      find: function (selector) {
+        var $elements = $frame.contents().find(selector);
+        return $elements;
+      }
+    };
+    return self;
+  };
+
   var CucumberHTMLListener = function($root) {
     var CucumberHTML = require('cucumber-html');
     var formatter    = new CucumberHTML.DOMFormatter($root);
@@ -79,6 +212,8 @@
     };
     return self;
   };
+
+  window.CukeStall = { FrameBrowser: FrameBrowser };
 
   function runFeature() {
     var Cucumber        = require('./cucumber');
