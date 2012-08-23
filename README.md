@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/jbpros/cukestall.png)](http://travis-ci.org/jbpros/cukestall)
 # CukeStall
 
 **DISCLAIMER** This project is at its experimental stage. It's not tested and might be buggy.
