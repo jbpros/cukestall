@@ -23,9 +23,9 @@ var CukeStall = {
           featurePaths.forEach(function (featurePath) {
             features.push(fs.readFileSync(featurePath));
           });
-          res.render(__dirname + '/views/index', {features: features, layout: 'layouts/application'});
+          res.render(__dirname + '/views/index.ejs', {features: features, layout: 'layouts/application'});
         } else if (req.url == mountEndpoint + '/blank') {
-          res.render(__dirname + '/views/blank', {layout: 'layouts/application'});
+          res.render(__dirname + '/views/blank.ejs', {layout: 'layouts/application'});
         } else if (req.url == mountEndpoint + '/javascripts/stepdefs.js') {
           res.setHeader('Content-Type', 'application/javascript');
           res.write("window.supportCode = function () {\n");
