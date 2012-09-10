@@ -1,56 +1,66 @@
 var BACKDOOR_NAME_REGEXP = /[^\/]+$/;
 var DEFAULT_MOUNT_ENDPOINT = '/cukestall';
 
-var fs      = require('fs');
-var express = require('express');
+var fs         = require('fs');
+var path       = require('path');
+var express    = require('express');
+var browserify = require('browserify');
+var Bundler    = require('cucumber/bundler');
+
+var DEFAULT_MOUNT_ENDPOINT = "/cukestall";
 
 var CukeStall = {
-  runner: function cukes(options) {
+  runner: function runner(options) {
     options = options || {};
+    options.backdoors = options.backdoors || {};
+    options.mountEndPoint = options.mountEndPoint || DEFAULT_MOUNT_ENDPOINT;
+    options.require = options.require || [];
 
-    var featurePaths     = options.featurePaths;
-    var supportCodePaths = options.supportCodePaths;
-    var stepDefsPaths    = options.stepDefsPaths;
-    var backdoors        = options.backdoors || {};
-    var mountEndpoint    = options.mountEndpoint || DEFAULT_MOUNT_ENDPOINT;
+    var bundler = Bundler();
+    var serveStatic = express.static(__dirname + '/public');
 
-    var serveStatic      = express.static(__dirname + '/public')
+    var serveCukeStall = function serveCukeStall(req, res, next) {
+      if (req.path == options.mountEndPoint + '/javascripts/cucumber.js') {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.end(bundler.bundle());
+      } else if (req.path == options.mountEndPoint + '/javascripts/cukestall.js') {
+        res.setHeader('Content-Type', 'application/javascript');
+        var supportCodeBundle = browserify();
+        supportCodeBundle.prepend('(function(context) {\n');
+
+        supportCodeBundle.append("context.supportCode = function () {\n");
+        options.require.forEach(function(requirePath) {
+          normalizedPath = path.normalize(requirePath);
+          supportCodeBundle.addEntry(requirePath, {target: path.normalize(normalizedPath)});
+          supportCodeBundle.append("require('"+normalizedPath+"').call(this);");
+        });
+        supportCodeBundle.append("};\n");
+        if (process.env.DEBUG_LEVEL)
+          supportCodeBundle.append("context.cukestallRequire = require;\n");
+        supportCodeBundle.append("})(window);");
+        res.end(supportCodeBundle.bundle());
+      } else if (req.url == options.mountEndPoint || req.url == options.mountEndPoint + '/') {
+        var features = [];
+        options.features.forEach(function (feature) {
+          features.push(fs.readFileSync(feature));
+        });
+        res.render(__dirname + '/views/index.ejs', {features: features, layout: 'layouts/application'});
+      } else if (req.url == options.mountEndPoint + '/blank') {
+        res.render(__dirname + '/views/blank.ejs', {layout: 'layouts/application'});
+      } else {
+        var backdoorName = BACKDOOR_NAME_REGEXP.exec(req.url);
+        if (backdoorName != null && options.backdoors[backdoorName]) {
+          options.backdoors[backdoorName](req, res, next);
+        } else {
+          next();
+        }
+      }
+    };
 
     return function (req, res, next) {
-      var serveCukeStall = function serveCukeStall() {
-        if (req.url == mountEndpoint || req.url == mountEndpoint + '/') {
-          var features = [];
-          featurePaths.forEach(function (featurePath) {
-            features.push(fs.readFileSync(featurePath));
-          });
-          res.render(__dirname + '/views/index.ejs', {features: features, layout: 'layouts/application'});
-        } else if (req.url == mountEndpoint + '/blank') {
-          res.render(__dirname + '/views/blank.ejs', {layout: 'layouts/application'});
-        } else if (req.url == mountEndpoint + '/javascripts/stepdefs.js') {
-          res.setHeader('Content-Type', 'application/javascript');
-          res.write("window.supportCode = function () {\n");
-          supportCodePaths.forEach(function (supportCodePath) {
-            var supportCode = require(supportCodePath);
-            res.write('(' + supportCode.toString() + ').apply(this);\n');
-          });
-          res.write("\n};\n");
-
-          res.write("window.stepDefs = function () {\n");
-          stepDefsPaths.forEach(function (stepDefsPath) {
-            var stepDefs = require(stepDefsPath);
-            res.write('(' + stepDefs.toString() + ').apply(this);\n');
-          });
-          res.end("\n};\n");
-        } else {
-          var backdoorName = BACKDOOR_NAME_REGEXP.exec(req.url);
-          if (backdoorName != null && backdoors[backdoorName]) {
-            backdoors[backdoorName](req, res, next);
-          } else {
-            next();
-          }
-        }
-      };
-      serveStatic(req, res, serveCukeStall);
+      serveStatic(req, res, function () {
+        serveCukeStall(req, res, next);
+      });
     };
   }
 };

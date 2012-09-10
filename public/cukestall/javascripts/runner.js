@@ -133,7 +133,7 @@
   };
 
   var CucumberHTMLListener = function($root) {
-    var CucumberHTML = require('cucumber-html');
+    var CucumberHTML = window.CucumberHTML;
     var formatter    = new CucumberHTML.DOMFormatter($root);
 
     formatter.uri('report.feature');
@@ -216,11 +216,11 @@
   window.CukeStall = { FrameBrowser: FrameBrowser };
 
   function runFeature() {
-    var Cucumber        = require('./cucumber');
+    var Cucumber        = window.Cucumber;
     var supportCode;
     var output          = $('#output');
     var featureSource   = $('script[type="text/x-gherkin"]').first().html();
-    var supportCode     = function () { window.supportCode.call(this); window.stepDefs.call(this); };
+    var supportCode     = function () { window.supportCode.call(this); };
     var cucumber        = Cucumber(featureSource, supportCode);
     var $output         = $('#output');
     var listener        = CucumberHTMLListener($output);

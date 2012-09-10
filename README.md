@@ -20,9 +20,8 @@ app.use(connect.logger('test'));
 // your app code goes here ...
 
 app.use(CukeStall.runner({
-  featurePaths: [__dirname + '/features/my.feature'],
-  stepDefsPaths: [__dirname + '/features/step_definitions/stepdefs.js'],
-  supportCodePaths: [__dirname + '/features/support/cukestall.js']
+  features: [__dirname + '/features/my.feature'],
+  require: [__dirname + '/features/step_definitions/stepdefs.js', __dirname + '/features/support/cukestall.js']
 }));
 
 app.listen(1337);
@@ -38,9 +37,8 @@ Backdoors are routes added on top of your existing application.
 
 ```javascript
 app.use(CukeStall.runner({
-  featurePaths: [__dirname + '/features/my.feature'],
-  stepDefsPaths: [__dirname + '/features/step_definitions/stepdefs.js'],
-  supportCodePaths: [__dirname + '/features/support/cukestall.js']
+  features: [__dirname + '/features/my.feature'],
+  require: [__dirname + '/features/step_definitions/stepdefs.js', __dirname + '/features/support/cukestall.js']
   backdoors: {
     reset_all: function (req, res, next) {
       // this backdoor will allow a step definition on the browser side
