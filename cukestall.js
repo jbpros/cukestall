@@ -29,6 +29,8 @@ var CukeStall = {
         res.setHeader('Content-Type', 'application/javascript');
         var supportCodeBundle = browserify();
         supportCodeBundle.prepend('(function(context) {\n');
+        if (process.env.DEBUG_LEVEL)
+          supportCodeBundle.append("context.cukestallRequire = require;\n");
 
         supportCodeBundle.addEntry('lib/kite.js', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite"});
         supportCodeBundle.addEntry('lib/kite/driver/cukestall_driver.coffee', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite/driver/cukestall_driver"});
@@ -37,18 +39,16 @@ var CukeStall = {
 
         options.modules.forEach(function(modulePath) {
           normalizedPath = path.normalize(modulePath);
-          supportCodeBundle.addEntry(modulePath, {target: path.normalize(normalizedPath)});
+          supportCodeBundle.addEntry(modulePath, {target: normalizedPath});
         });
 
         supportCodeBundle.append("context.supportCode = function () {\n");
         options.require.forEach(function(requirePath) {
           normalizedPath = path.normalize(requirePath);
-          supportCodeBundle.addEntry(requirePath, {target: path.normalize(normalizedPath)});
+          supportCodeBundle.addEntry(requirePath, {target: normalizedPath});
           supportCodeBundle.append("require('"+normalizedPath+"').call(this);");
         });
         supportCodeBundle.append("};\n");
-        if (process.env.DEBUG_LEVEL)
-          supportCodeBundle.append("context.cukestallRequire = require;\n");
         supportCodeBundle.append("})(window);");
         res.end(supportCodeBundle.bundle());
       } else if (req.url == options.mountEndPoint || req.url == options.mountEndPoint + '/') {
