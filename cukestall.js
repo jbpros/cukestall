@@ -6,6 +6,7 @@ var path       = require('path');
 var express    = require('express');
 var browserify = require('browserify');
 var Bundler    = require('cucumber/bundler');
+//require('coffee-script');
 
 var DEFAULT_MOUNT_ENDPOINT = "/cukestall";
 
@@ -15,6 +16,7 @@ var CukeStall = {
     options.backdoors = options.backdoors || {};
     options.mountEndPoint = options.mountEndPoint || DEFAULT_MOUNT_ENDPOINT;
     options.require = options.require || [];
+    options.modules = options.modules || [];
 
     var bundler = Bundler();
     var serveStatic = express.static(__dirname + '/public');
@@ -27,6 +29,16 @@ var CukeStall = {
         res.setHeader('Content-Type', 'application/javascript');
         var supportCodeBundle = browserify();
         supportCodeBundle.prepend('(function(context) {\n');
+
+        supportCodeBundle.addEntry('lib/kite.js', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite"});
+        supportCodeBundle.addEntry('lib/kite/driver/cukestall_driver.coffee', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite/driver/cukestall_driver"});
+        supportCodeBundle.append("context.Kite = require('kite');\n");
+        supportCodeBundle.append("context.Kite.Driver.Cukestall = require('kite/driver/cukestall_driver');\n");
+
+        options.modules.forEach(function(modulePath) {
+          normalizedPath = path.normalize(modulePath);
+          supportCodeBundle.addEntry(modulePath, {target: path.normalize(normalizedPath)});
+        });
 
         supportCodeBundle.append("context.supportCode = function () {\n");
         options.require.forEach(function(requirePath) {
