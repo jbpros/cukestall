@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "cucumber": "0.2.21",
-    "kite": "0.0.1",
+    "kite": "0.0.0",
     "browserify": "1.15.5",
     "express": "2.5.9",
     "ejs": "0.6.1"
