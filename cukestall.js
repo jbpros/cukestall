@@ -33,9 +33,7 @@ var CukeStall = {
           supportCodeBundle.append("context.cukestallRequire = require;\n");
 
         supportCodeBundle.addEntry('lib/kite.js', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite"});
-        supportCodeBundle.addEntry('lib/kite/driver/cukestall_driver.coffee', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite/driver/cukestall_driver"});
-        supportCodeBundle.append("context.Kite = require('kite');\n");
-        supportCodeBundle.append("context.Kite.Driver.Cukestall = require('kite/driver/cukestall_driver');\n");
+        supportCodeBundle.addEntry('lib/kite/driver/cukestall_driver.coffee', {dirname: __dirname+"/node_modules/kite", target: "/node_modules/kite/lib/kite/driver/cukestall_driver"});
 
         options.modules.forEach(function(modulePath) {
           normalizedPath = path.normalize(modulePath);
@@ -45,12 +43,18 @@ var CukeStall = {
         supportCodeBundle.append("context.supportCode = function () {\n");
         options.require.forEach(function(requirePath) {
           normalizedPath = path.normalize(requirePath);
-          supportCodeBundle.addEntry(requirePath, {target: normalizedPath});
+          supportCodeBundle.require(requirePath, {target: normalizedPath});
           supportCodeBundle.append("require('"+normalizedPath+"').call(this);");
         });
         supportCodeBundle.append("};\n");
         supportCodeBundle.append("})(window);");
-        res.end(supportCodeBundle.bundle());
+        var bundle = supportCodeBundle.bundle();
+        if (Object.keys(supportCodeBundle.errors).length > 0) {
+          res.send("Errors in bundle", 500);
+          res.end();
+        } else {
+          res.end(bundle);
+        }
       } else if (req.url == options.mountEndPoint || req.url == options.mountEndPoint + '/') {
         var features = [];
         options.features.forEach(function (feature) {
