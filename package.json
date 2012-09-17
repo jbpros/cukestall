@@ -2,7 +2,7 @@
   "author": "Julien Biezemans <jb@jbpros.com> (http://jbpros.net)",
   "name": "cukestall",
   "description": "Cucumber.js in-browser runner",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "main": "./cukestall",
   "repository": {
     "type": "git",
