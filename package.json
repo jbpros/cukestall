@@ -9,7 +9,7 @@
     "url": "git://github.com/jbpros/cukestall.git"
   },
   "dependencies": {
-    "cucumber": "0.2.22",
+    "cucumber": "0.3.0",
     "kite": "0.0.1",
     "browserify": "1.15.5",
     "express": "2.5.9",
