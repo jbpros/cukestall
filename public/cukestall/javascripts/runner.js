@@ -78,7 +78,7 @@
 
       getText: function (callback) {
         var text = $($frame.get()[0].contentDocument.body).text();
-        callback(text);
+        callback(null, text);
       },
 
       createSelector: function (selector) {
